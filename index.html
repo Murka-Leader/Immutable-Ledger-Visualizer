@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Blockchain Visualizer | Deep Ledger</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <header>
+        <div class="logo">Deep Ledger</div>
+        <div class="controls">
+            <button id="add-block-btn">Add New Block</button>
+            <button id="validate-btn">Validate Chain</button>
+        </div>
+    </header>
+
+    <main>
+        <div id="blockchain-container">
+            </div>
+
+        <aside>
+            <div class="console-header">
+                System Console
+                <span id="difficulty-badge" style="font-size: 0.7rem; color: var(--accent-glow)">DIFFICULTY: 4</span>
+            </div>
+            <div id="console-log">
+                <div class="log-entry">Initializing Blockchain...</div>
+                <div class="log-entry log-success">Genesis Block created.</div>
+            </div>
+        </aside>
+    </main>
+
+    <script src="script.js"></script>
+</body>
+</html>
