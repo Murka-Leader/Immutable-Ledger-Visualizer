@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Blockchain Visualizer | Deep Ledger</title>
+    <style>
+        :root {
+            --bg-deep: #0a0b10;
+            --bg-card: #161b22;
+            --accent-glow: #00f2ff;
+            --valid-green: #00ff88;
+            --invalid-red: #ff4d4d;
+            --text-primary: #e6edf3;
+            --text-secondary: #8b949e;
+            --border-color: #30363d;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-deep);
+            color: var(--text-primary);
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* Header */
+        header {
+            padding: 1.5rem 2rem;
+            background: rgba(22, 27, 34, 0.8);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 100;
+        }
+
+        .logo {
+            font-size: 1.5rem;
+            font-weight: 800;
+            letter-spacing: 2px;
+            color: var(--accent-glow);
+            text-transform: uppercase;
+        }
+
+        .controls {
+            display: flex;
+            gap: 1rem;
+        }
+
+        button {
+            background: transparent;
+            border: 1px solid var(--accent-glow);
+            color: var(--accent-glow);
+            padding: 0.6rem 1.2rem;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            font-size: 0.8rem;
+        }
+
+        button:hover:not(:disabled) {
+            background: var(--accent-glow);
+            color: var(--bg-deep);
+            box-shadow: 0 0 15px var(--accent-glow);
+        }
+
+        button:disabled {
+            border-color: var(--border-color);
+            color: var(--text-secondary);
+            cursor: not-allowed;
+        }
+
+        /* Main Layout */
+        main {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        /* Blockchain View */
+        #blockchain-container {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            padding: 2rem;
+            overflow-x: auto;
+            gap: 2rem;
+            scroll-behavior: smooth;
+        }
+
+        /* Block Card */
+        .block-card {
+            min-width: 320px;
+            max-width: 320px;
+            background: var(--bg-card);
+            border: 2px solid var(--border-color);
+            border-radius: 12px;
+            padding: 1.5rem;
+            position: relative;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            animation: slideIn 0.5s ease-out forwards;
+        }
+
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateX(50px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+
+        .block-card.valid { border-color: var(--valid-green); box-shadow: 0 0 10px rgba(0, 255, 136, 0.2); }
+        .block-card.invalid { border-color: var(--invalid-red); box-shadow: 0 0 15px rgba(255, 77, 77, 0.3); }
+        .block-card.mining { border-color: var(--accent-glow); animation: pulse 1.5s infinite; }
+
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(0, 242, 255, 0.4); }
+            70% { box-shadow: 0 0 0 20px rgba(0, 242, 255, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(0, 242, 255, 0); }
+        }
+
+        .block-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 1rem;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 0.5rem;
+        }
+
+        .block-index { font-weight: 800; color: var(--text-secondary); }
+        .block-ts { font-size: 0.75rem; color: var(--text-secondary); }
+
+        .field { margin-bottom: 1rem; }
+        .label {
+            display: block;
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            color: var(--text-secondary);
+            margin-bottom: 0.3rem;
+        }
+
+        .data-input {
+            width: 100%;
+            background: #0d1117;
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            padding: 0.5rem;
+            border-radius: 4px;
+            font-size: 0.9rem;
+        }
+
+        .hash-display {
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 0.75rem;
+            word-break: break-all;
+            background: #0d1117;
+            padding: 0.5rem;
+            border-radius: 4px;
+            border: 1px solid #30363d;
+            color: var(--accent-glow);
+        }
+
+        .previous-hash { color: var(--text-secondary); font-style: italic; }
+
+        /* Sidebar / Console */
+        aside {
+            width: 350px;
+            background: var(--bg-card);
+            border-left: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            padding: 1rem;
+        }
+
+        .console-header {
+            font-size: 0.9rem;
+            font-weight: bold;
+            color: var(--text-secondary);
+            margin-bottom: 1rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        #console-log {
+            flex: 1;
+            background: #0d1117;
+            border-radius: 8px;
+            padding: 1rem;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 0.85rem;
+            overflow-y: auto;
+            color: #d1d5db;
+            line-height: 1.4;
+        }
+
+        .log-entry { margin-bottom: 0.5rem; border-left: 2px solid #30363d; padding-left: 8px; }
+        .log-mining { color: var(--accent-glow); }
+        .log-success { color: var(--valid-green); }
+        .log-error { color: var(--invalid-red); }
+
+        /* Link between blocks */
+        .chain-link {
+            min-width: 40px;
+            height: 2px;
+            background: var(--border-color);
+            position: relative;
+        }
+
+        .chain-link::after {
+            content: '🔗';
+            position: absolute;
+            top: -12px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 1.2rem;
+        }
+
+        /* Scrollbar styling */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: var(--bg-deep); }
+        ::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #484f58; }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="logo">Deep Ledger</div>
+        <div class="controls">
+            <button id="add-block-btn">Add New Block</button>
+            <button id="validate-btn">Validate Chain</button>
+        </div>
+    </header>
+
+    <main>
+        <div id="blockchain-container">
+            <!-- Blocks injected here -->
+        </div>
+
+        <aside>
+            <div class="console-header">
+                System Console
+                <span id="difficulty-badge" style="font-size: 0.7rem; color: var(--accent-glow)">DIFFICULTY: 4</span>
+            </div>
+            <div id="console-log">
+                <div class="log-entry">Initializing Blockchain...</div>
+                <div class="log-entry log-success">Genesis Block created.</div>
+            </div>
+        </aside>
+    </main>
+
+    <script>
+        /**
+         * UTILITY: SHA-256 Hashing
+         * Uses the browser's native subtle crypto API. 
+         * This is asynchronous to mimic real-world computation.
+         */
+        async function sha256(message) {
+            const msgBuffer = new TextEncoder().encode(message);
+            const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+            const hashArray = Array.from(new Uint8Array(hashBuffer));
+            return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+        }
+
+        /**
+         * BLOCK CLASS
+         * The atomic unit of the blockchain.
+         * The 'previousHash' property is the cryptographic "glue" that creates the chain.
+         */
+        class Block {
+            constructor(index, timestamp, data, previousHash = '') {
+                this.index = index;
+                this.timestamp = timestamp;
+                this.data = data;
+                this.previousHash = previousHash;
+                this.nonce = 0;
+                this.hash = '';
+            }
+
+            // Calculates the hash based on all properties including the nonce
+            async calculateHash() {
+                return await sha256(
+                    this.index + 
+                    this.previousHash + 
+                    this.timestamp + 
+                    JSON.stringify(this.data) + 
+                    this.nonce
+                );
+            }
+
+            /**
+             * PROOF OF WORK (Mining)
+             * Why? To prevent spam and tampering. One must prove they spent 
+             * computational power to add a block. 
+             * We increment 'nonce' until the hash starts with a specific number of zeros.
+             */
+            async mineBlock(difficulty, onIteration) {
+                const target = Array(difficulty + 1).join("0");
+                
+                while (true) {
+                    this.hash = await this.calculateHash();
+                    if (this.hash.substring(0, difficulty) === target) {
+                        break;
+                    }
+                    this.nonce++;
+                    
+                    // Periodic UI update during mining
+                    if (this.nonce % 100 === 0 && onIteration) {
+                        onIteration(this.nonce, this.hash);
+                    }
+                }
+            }
+        }
+
+        /**
+         * BLOCKCHAIN CLASS
+         * Manages the sequence of blocks and validation logic.
+         */
+        class Blockchain {
+            constructor() {
+                this.chain = [];
+                this.difficulty = 4;
+            }
+
+            async createGenesisBlock() {
+                const genesis = new Block(0, new Date().toISOString(), "Genesis Block", "0");
+                await genesis.mineBlock(this.difficulty);
+                this.chain.push(genesis);
+            }
+
+            getLatestBlock() {
+                return this.chain[this.chain.length - 1];
+            }
+
+            async addBlock(newBlock) {
+                newBlock.previousHash = this.getLatestBlock().hash;
+                await newBlock.mineBlock(this.difficulty);
+                this.chain.push(newBlock);
+            }
+
+            /**
+             * CHAIN VALIDATION
+             * Verifies two things:
+             * 1. Does the block's current hash match its calculated hash? (Tamper check)
+             * 2. Does the block's 'previousHash' match the actual hash of the predecessor? (Chain check)
+             */
+            async isChainValid() {
+                for (let i = 1; i < this.chain.length; i++) {
+                    const currentBlock = this.chain[i];
+                    const previousBlock = this.chain[i - 1];
+
+                    // Check if block has been tampered with
+                    const recalculatedHash = await currentBlock.calculateHash();
+                    if (currentBlock.hash !== recalculatedHash) {
+                        return { valid: false, index: i, reason: 'TAMPERED_DATA' };
+                    }
+
+                    // Check if chain connection is broken
+                    if (currentBlock.previousHash !== previousBlock.hash) {
+                        return { valid: false, index: i, reason: 'BROKEN_LINK' };
+                    }
+                }
+                return { valid: true };
+            }
+        }
+
+        // --- UI & APP LOGIC ---
+
+        const ledger = new Blockchain();
+        const container = document.getElementById('blockchain-container');
+        const consoleEl = document.getElementById('console-log');
+        const addBtn = document.getElementById('add-block-btn');
+        const validateBtn = document.getElementById('validate-btn');
+
+        function log(message, type = '') {
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${type}`;
+            entry.innerText = `[${new Date().toLocaleTimeString()}] ${message}`;
+            consoleEl.appendChild(entry);
+            consoleEl.scrollTop = consoleEl.scrollHeight;
+        }
+
+        async function renderChain() {
+            container.innerHTML = '';
+            const validationStatus = await ledger.isChainValid();
+
+            ledger.chain.forEach((block, idx) => {
+                // Determine block status
+                let statusClass = 'valid';
+                if (!validationStatus.valid && idx >= validationStatus.index) {
+                    statusClass = 'invalid';
+                }
+
+                const blockDiv = document.createElement('div');
+                blockDiv.className = `block-card ${statusClass}`;
+                blockDiv.id = `block-${idx}`;
+                
+                blockDiv.innerHTML = `
+                    <div class="block-header">
+                        <span class="block-index">BLOCK #${block.index}</span>
+                        <span class="block-ts">${new Date(block.timestamp).toLocaleTimeString()}</span>
+                    </div>
+                    <div class="field">
+                        <label class="label">Data / Transaction</label>
+                        <input type="text" class="data-input" value="${block.data}" 
+                               oninput="updateBlockData(${idx}, this.value)">
+                    </div>
+                    <div class="field">
+                        <label class="label">Previous Hash</label>
+                        <div class="hash-display previous-hash">${block.previousHash}</div>
+                    </div>
+                    <div class="field">
+                        <label class="label">Hash</label>
+                        <div class="hash-display">${block.hash}</div>
+                    </div>
+                    <div style="display:flex; justify-content: space-between; align-items: center">
+                        <div>
+                            <label class="label">Nonce</label>
+                            <span style="font-size: 0.8rem; font-family: monospace;">${block.nonce}</span>
+                        </div>
+                        <div style="text-align: right">
+                            <label class="label">Status</label>
+                            <span style="font-size: 0.7rem; font-weight: bold; color: ${statusClass === 'valid' ? 'var(--valid-green)' : 'var(--invalid-red)'}">
+                                ${statusClass.toUpperCase()}
+                            </span>
+                        </div>
+                    </div>
+                `;
+
+                container.appendChild(blockDiv);
+
+                // Add visual link between blocks
+                if (idx < ledger.chain.length - 1) {
+                    const link = document.createElement('div');
+                    link.className = 'chain-link';
+                    container.appendChild(link);
+                }
+            });
+        }
+
+        async function updateBlockData(index, newVal) {
+            ledger.chain[index].data = newVal;
+            log(`Block #${index} data edited! Integrity check failing...`, 'log-error');
+            renderChain();
+        }
+
+        addBtn.addEventListener('click', async () => {
+            addBtn.disabled = true;
+            const index = ledger.chain.length;
+            const ts = new Date().toISOString();
+            const data = `Transaction ${Math.floor(Math.random() * 9000 + 1000)}`;
+            const newBlock = new Block(index, ts, data);
+
+            // Setup UI for mining
+            log(`Mining Block #${index}...`, 'log-mining');
+            
+            // Temporary placeholder card for animation
+            const tempDiv = document.createElement('div');
+            tempDiv.className = 'block-card mining';
+            tempDiv.innerHTML = `<div class="block-header">MINING...</div><div class="field"><label class="label">Current Nonce</label><div id="mining-nonce" class="hash-display">0</div></div>`;
+            container.appendChild(tempDiv);
+            container.scrollLeft = container.scrollWidth;
+
+            await ledger.addBlock(newBlock);
+            
+            log(`Block #${index} successfully mined! Hash found.`, 'log-success');
+            renderChain();
+            addBtn.disabled = false;
+        });
+
+        validateBtn.addEventListener('click', async () => {
+            log('Initiating full chain validation...', 'log-mining');
+            const result = await ledger.isChainValid();
+            if (result.valid) {
+                log('CHAIN INTEGRITY VERIFIED: All hashes match.', 'log-success');
+            } else {
+                log(`CHAIN CORRUPTED: Error at Block #${result.index} (${result.reason})`, 'log-error');
+            }
+            renderChain();
+        });
+
+        // Initialize
+        window.onload = async () => {
+            await ledger.createGenesisBlock();
+            renderChain();
+        };
+
+    </script>
+</body>
+</html>
